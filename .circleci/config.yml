@@ -320,6 +320,9 @@ jobs:
           name: "Store test results"
           path: terraform
 
+      - store_artifacts:
+          path: terraform/<< pipeline.parameters.junit_file_name >>
+
       # - terraform/destroy:
       #     path: terraform
 
