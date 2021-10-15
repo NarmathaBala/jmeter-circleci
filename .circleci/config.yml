@@ -225,8 +225,6 @@ jobs:
 
       - install-terraform-linux
 
-      - install-azcopy-linux
-
       - terraform/init:
           path: terraform
 
