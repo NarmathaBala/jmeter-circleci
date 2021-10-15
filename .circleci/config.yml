@@ -22,6 +22,9 @@ parameters:
   jmeter_directory_input:
     type: string
     default: "jmeter"
+  junit_file_name:
+    type: string
+    default: "output.xml"
 
 orbs:
   windows: circleci/windows@2.2.0
@@ -222,6 +225,8 @@ jobs:
 
       - install-terraform-linux
 
+      - install-azcopy-linux
+
       - terraform/init:
           path: terraform
 
@@ -283,6 +288,35 @@ jobs:
             RG=$(terraform output --raw resource_group_name)
             NAME=$(terraform output --raw jmeter_controller_name)
             az container logs -g $RG -n $NAME
+
+      - run:
+          name: "Download JMeter Results."
+          working_directory: terraform
+          command: |
+            KEY=$(terraform output --raw storage_account_key)
+            STORAGE_NAME=$(terraform output --raw storage_account_name)
+            FILESHARE_NAME=$(terraform output --raw storage_file_share_name)
+            JMETER_RESULTS=$(terraform output --raw jmeter_results_file)
+            echo $JMETER_RESULTS_PATH
+            az storage file download -p $JMETER_RESULTS -s $FILESHARE_NAME --account-name $STORAGE_NAME --account-key $KEY
+
+      - run:
+          name: "Convert JMeter results to JUnit."
+          working_directory: terraform
+          command: |
+            JMETER_RESULTS=$(terraform output --raw jmeter_results_file)
+            JUNIT_RESULTS=<< pipeline.parameters.junit_file_name >>
+            python3 ../scripts/jtl_junit_converter.py $JMETER_RESULTS $JUNIT_RESULTS
+
+      - run:
+          name: "Upload JUnit Results to fileshare."
+          working_directory: terraform
+          command: |
+            KEY=$(terraform output --raw storage_account_key)
+            STORAGE_NAME=$(terraform output --raw storage_account_name)
+            FILESHARE_NAME=$(terraform output --raw storage_file_share_name)
+            JUNIT_RESULTS=<< pipeline.parameters.junit_file_name >>
+            az storage file upload -s $FILESHARE_NAME --source $JUNIT_RESULTS --account-name $STORAGE_NAME --account-key $KEY
 
       # - terraform/destroy:
       #     path: terraform
