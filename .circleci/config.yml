@@ -316,6 +316,10 @@ jobs:
             JUNIT_RESULTS=<< pipeline.parameters.junit_file_name >>
             az storage file upload -s $FILESHARE_NAME --source $JUNIT_RESULTS --account-name $STORAGE_NAME --account-key $KEY
 
+      - store_test_results:
+          name: "Store test results"
+          path: terraform
+
       # - terraform/destroy:
       #     path: terraform
 
