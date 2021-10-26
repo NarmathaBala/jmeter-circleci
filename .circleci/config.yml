@@ -205,8 +205,6 @@ jobs:
 
             # Output variables to file
             echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
-            echo "adding line to sample.properties file"
-            echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> jmeter/sample.properties
 
       - persist_to_workspace:
           name: "Upload output file to shared workspace"
@@ -250,6 +248,7 @@ jobs:
           command: |
             URL=$(terraform output --raw storage_file_share_url)
             KEY=$(terraform output --raw storage_account_key)
+            cp .env >> ../jmeter/sample.properties
 
             az storage file upload-batch \
             --destination $URL \
