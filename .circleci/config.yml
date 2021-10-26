@@ -205,6 +205,8 @@ jobs:
 
             # Output variables to file
             echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
+            echo "adding line to sample.properties file"
+            echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> jmeter/sample.properties
 
       - persist_to_workspace:
           name: "Upload output file to shared workspace"
