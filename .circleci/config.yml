@@ -248,7 +248,7 @@ jobs:
           command: |
             URL=$(terraform output --raw storage_file_share_url)
             KEY=$(terraform output --raw storage_account_key)
-            cp .env >> ../jmeter/sample.properties
+            cp ../.env  ../jmeter/sample.properties
 
             az storage file upload-batch \
             --destination $URL \
