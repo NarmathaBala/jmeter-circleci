@@ -25,6 +25,9 @@ parameters:
   junit_file_name:
     type: string
     default: "output.xml"
+  properties_file_name:
+    type: string
+    default: "sample.properties"
 
 orbs:
   windows: circleci/windows@2.2.0
@@ -205,14 +208,15 @@ jobs:
 
             # Output variables to file
             echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
-            echo "target_hostname=$func.azurewebsites.net" >> sample.properties
+            echo "target_hostname=$func.azurewebsites.net" >> << pipeline.parameters.properties_file_name >>
+            echo "number_of_threads=10" >> << pipeline.parameters.properties_file_name >>
 
       - persist_to_workspace:
           name: "Upload output file to shared workspace"
           root: .
           paths:
             - .env
-            - sample.properties
+            - << pipeline.parameters.properties_file_name >>
 
   load_test:
     machine:
@@ -250,7 +254,7 @@ jobs:
           command: |
             URL=$(terraform output --raw storage_file_share_url)
             KEY=$(terraform output --raw storage_account_key)
-            cp ../sample.properties  ../jmeter/sample.properties
+            cp ../<< pipeline.parameters.properties_file_name >>  ../jmeter/<< pipeline.parameters.properties_file_name >>
 
             az storage file upload-batch \
             --destination $URL \

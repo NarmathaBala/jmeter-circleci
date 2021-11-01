@@ -98,3 +98,8 @@ variable "TARGET_HOSTNAME" {
   type    = string
   default = "microsoft.com"
 }
+
+variable "PROPERTIES_FILE_NAME" {
+  type = string
+  default = "sample.properties"
+}
