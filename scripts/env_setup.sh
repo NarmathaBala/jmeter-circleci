@@ -101,6 +101,7 @@
     # Create Bastion host
     echo "#### Creating Bastion host ####"
     az network bastion create \
+        --output none \
         --name "${resource_name_prefix}-bh" \
         --public-ip-address "${resource_name_prefix}-pip" \
         --resource-group "$resource_group" \
