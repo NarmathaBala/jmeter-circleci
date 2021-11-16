@@ -95,8 +95,8 @@ jobs:
             .
   
   deploy_script:
-    machine:
-      image: ubuntu-2004:202107-02
+    executor:
+      name: azure-cli/default
     steps:
       - checkout 
 
