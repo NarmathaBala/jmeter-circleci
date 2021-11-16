@@ -233,28 +233,39 @@ workflows:
           #     only:
           #       - main
 
+  # build_deploy_loadtest:
+  #   jobs:
+  #     - build_web_app
+  #     - test_web_app:
+  #         requires:
+  #           - build_web_app
+  #     - package_web_app:
+  #         requires:
+  #           - test_web_app
+  #         # filters:
+  #         #   branches:
+  #         #     only:
+  #         #       - main
+  #     - deploy_approval:
+  #         type: approval
+  #         requires:
+  #           - package_web_app
+  #     - deploy_web_app:
+  #         requires:
+  #           - deploy_approval
+  #     - load_test:
+  #         requires:
+  #           - deploy_web_app
+
   build_deploy_loadtest:
     jobs:
-      - deploy_script
-      # - build_web_app
-      # - test_web_app:
-      #     requires:
-      #       - build_web_app
-      # - package_web_app:
-      #     requires:
-      #       - test_web_app
-          # filters:
-          #   branches:
-          #     only:
-          #       - main
       - deploy_approval:
           type: approval
-          requires:
-            - deploy_script
-            # - package_web_app
-      - deploy_web_app:
+      - deploy_script:
           requires:
             - deploy_approval
       - load_test:
-          requires:
-            - deploy_web_app
+          requires: 
+            - deploy_script
+            
+
