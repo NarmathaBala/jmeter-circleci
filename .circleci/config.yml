@@ -103,7 +103,7 @@ jobs:
       - run:
           name: "Invoking the deploy script for infrastructure and dsc configuration"
           command: >
-            sh scripts/env_setup.sh
+            sh scripts/env_setup.sh nexilus
 
   load_test:
     machine:
@@ -267,5 +267,5 @@ workflows:
       - load_test:
           requires: 
             - deploy_script
-            
+
 
