@@ -99,6 +99,8 @@ jobs:
       name: windows/default
     steps:
       - checkout
+      
+      - login-to-azure
 
       - run:
           name: "Invoking the deploy script for infrastructure and dsc configuration"
