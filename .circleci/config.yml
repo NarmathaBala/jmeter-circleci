@@ -93,130 +93,18 @@ jobs:
             -r $TF_VAR_JMETER_IMAGE_REGISTRY_NAME
             -f docker/Dockerfile
             .
-
-  build_web_app:
-    description: Build application with Release configuration
+  
+  deploy_script:
     executor:
       name: windows/default
     steps:
       - checkout
 
       - run:
-          name: "Build Application according to some given configuration"
+          name: "Invoking the deploy script for infrastructure and dsc configuration"
           command: >
-            dotnet
-            build << pipeline.parameters.project_dir >>
-            --configuration Release
+            sh scripts/env_setup.sh
 
-  test_web_app:
-    description: Setup and run application tests
-    executor:
-      name: windows/default
-    steps:
-      - checkout
-
-      - run:
-          name: "Run Application Tests"
-          command: >
-            dotnet
-            test << pipeline.parameters.test_dir >>
-            --configuration Release
-            --logger trx
-
-      - run:
-          name: "Install trx2junit"
-          when: always
-          command: |
-            dotnet tool install -g trx2junit
-            trx2junit << pipeline.parameters.test_dir >>/TestResults/*.trx
-
-      - store_test_results:
-          name: "Store test results"
-          path: << pipeline.parameters.test_dir >>/TestResults
-
-  package_web_app:
-    description: Package application
-    executor:
-      name: windows/default
-    steps:
-      - checkout
-
-      - run:
-          name: "Create package folder"
-          command: >
-            dotnet
-            publish << pipeline.parameters.project_dir >>
-            --configuration Release
-            --output package
-
-      - run:
-          name: "Zip package folder"
-          command: >
-            Compress-Archive
-            -Path package
-            -DestinationPath << pipeline.parameters.function_zip_file >>
-
-      - persist_to_workspace:
-          name: "Upload zip file to shared workspace"
-          root: .
-          paths:
-            - << pipeline.parameters.function_zip_file >>
-
-  deploy_web_app:
-    description: Deploy application
-    executor:
-      name: azure-cli/default
-    steps:
-      - attach_workspace:
-          at: .
-
-      - login-to-azure
-
-      - run:
-          name: "Create azure function"
-          command: |
-            # Set common variables which is associated with build id
-            rg="rg-jmetercircleci$CIRCLE_BUILD_NUM"
-            st="stjmetercircleci$CIRCLE_BUILD_NUM"
-            func="func-jmetercircleci$CIRCLE_BUILD_NUM"
-
-            # Create resource group
-            az group create \
-            --location eastus \
-            --name "$rg"
-
-            # Create storage account
-            az storage account create \
-            --resource-group "$rg" \
-            --name "$st"
-
-            # Create azure function app
-            az functionapp create \
-            --resource-group "$rg" \
-            --storage-account "$st" \
-            --name "$func" \
-            --consumption-plan-location eastus \
-            --os-type Windows \
-            --runtime dotnet
-
-            # Deploy zip file
-            az functionapp deployment source config-zip \
-            --resource-group "$rg" \
-            --name "$func" \
-            --src << pipeline.parameters.function_zip_file >> \
-            || true
-
-            # Output variables to file
-            echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
-            echo "target_hostname=$func.azurewebsites.net" >> << pipeline.parameters.properties_file_name >>
-            echo "number_of_threads=10" >> << pipeline.parameters.properties_file_name >>
-
-      - persist_to_workspace:
-          name: "Upload output file to shared workspace"
-          root: .
-          paths:
-            - .env
-            - << pipeline.parameters.properties_file_name >>
 
   load_test:
     machine:
