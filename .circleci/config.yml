@@ -44,9 +44,9 @@ commands:
           command: az -v
 
       - azure-cli/login-with-service-principal:
-          azure-sp: ARM_CLIENT_ID
-          azure-sp-password: ARM_CLIENT_SECRET
-          azure-sp-tenant: ARM_TENANT_ID
+          azure-sp: SERVICE_PRINCIPAL_ID
+          azure-sp-password: SERVICE_PRINCIPAL_SECRET
+          azure-sp-tenant: TENANT_ID
 
   install-terraform-linux:
     steps:
