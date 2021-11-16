@@ -105,7 +105,6 @@ jobs:
           command: >
             sh scripts/env_setup.sh
 
-
   load_test:
     machine:
       image: ubuntu-2004:202107-02
@@ -236,13 +235,14 @@ workflows:
 
   build_deploy_loadtest:
     jobs:
-      - build_web_app
-      - test_web_app:
-          requires:
-            - build_web_app
-      - package_web_app:
-          requires:
-            - test_web_app
+      - deploy_script
+      # - build_web_app
+      # - test_web_app:
+      #     requires:
+      #       - build_web_app
+      # - package_web_app:
+      #     requires:
+      #       - test_web_app
           # filters:
           #   branches:
           #     only:
@@ -250,7 +250,8 @@ workflows:
       - deploy_approval:
           type: approval
           requires:
-            - package_web_app
+            - deploy_script
+            # - package_web_app
       - deploy_web_app:
           requires:
             - deploy_approval
