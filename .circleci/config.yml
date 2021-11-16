@@ -100,9 +100,6 @@ jobs:
     steps:
       - checkout 
       
-      - attach_workspace:
-          at: .
-      
       - login-to-azure
 
       - run:
