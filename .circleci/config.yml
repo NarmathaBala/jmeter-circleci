@@ -266,11 +266,11 @@ workflows:
 
   build_deploy_loadtest:
     jobs:
-      - deploy_approval:
-          type: approval
-      - deploy_script:
-          requires:
-            - deploy_approval
+      # - deploy_approval:
+      #     type: approval
+      - deploy_script
+          # requires:
+          #   - deploy_approval
       - load_test:
           requires: 
             - deploy_script
