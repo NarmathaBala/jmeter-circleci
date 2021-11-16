@@ -101,12 +101,12 @@
     # Create Bastion host
     echo "#### Creating Bastion host ####"
     az network bastion create \
-        --output none \
         --name "${resource_name_prefix}-bh" \
         --public-ip-address "${resource_name_prefix}-pip" \
         --resource-group "$resource_group" \
         --vnet-name "${resource_name_prefix}-vnet" \
-        --location "$location"
+        --location "$location" \
+        --scale-units "2"
 
     # Create storage account
     echo "#### Creating storage account ####"
