@@ -95,10 +95,15 @@ jobs:
             .
   
   deploy_script:
-    executor:
-      name: windows/default
+    machine:
+      image: ubuntu-2004:202107-02
     steps:
       - checkout 
+
+      - attach_workspace:
+          at: .
+
+      - login-to-azure
 
       - run:
           name: "Invoking the deploy script for infrastructure and dsc configuration"
