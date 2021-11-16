@@ -96,7 +96,7 @@ jobs:
   
   deploy_script:
     executor:
-      name: azure-cli/default
+      name: windows/default
     steps:
       - checkout 
       
