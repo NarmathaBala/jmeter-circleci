@@ -98,7 +98,10 @@ jobs:
     executor:
       name: windows/default
     steps:
-      - checkout
+      - checkout 
+      
+      - attach_workspace:
+          at: .
       
       - login-to-azure
 
