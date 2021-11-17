@@ -38,6 +38,7 @@ commands:
   login-to-azure:
     steps:
       - azure-cli/install
+      - run: sudo apt-cache policy azure-cli | sudo apt-get install --allow-downgrades azure-cli=2.18.0-1~stretch
 
       - run:
           name: "Verify Azure install"
