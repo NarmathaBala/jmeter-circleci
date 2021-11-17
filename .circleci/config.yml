@@ -266,7 +266,7 @@ jobs:
           command: |
             cd scripts
             chmod a+x ./cleanup.sh
-            ./cleanup.sh << pipeline.parameters.environment_name >>
+            ./cleanup.sh << pipeline.parameters.environment_name >> jmeter
 
       
 
