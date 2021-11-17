@@ -38,6 +38,19 @@ commands:
   login-to-azure:
     steps:
       - azure-cli/install
+
+      - run:
+          name: "Verify Azure install"
+          command: az -v
+
+      - azure-cli/login-with-service-principal:
+          azure-sp: SERVICE_PRINCIPAL_ID
+          azure-sp-password: SERVICE_PRINCIPAL_SECRET
+          azure-sp-tenant: TENANT_ID
+  
+  login-to-azure-down:
+    steps:
+      - azure-cli/install
       - run: sudo apt-cache policy azure-cli | sudo apt-get install --allow-downgrades azure-cli=2.18.0-1~stretch
 
       - run:
@@ -48,6 +61,7 @@ commands:
           azure-sp: SERVICE_PRINCIPAL_ID
           azure-sp-password: SERVICE_PRINCIPAL_SECRET
           azure-sp-tenant: TENANT_ID
+  
 
   install-terraform-linux:
     steps:
@@ -104,7 +118,7 @@ jobs:
       - attach_workspace:
           at: .
 
-      - login-to-azure
+      - login-to-azure-down
 
       - run:
           name: "Invoking the deploy script for infrastructure and dsc configuration"
