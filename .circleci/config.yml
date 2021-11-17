@@ -125,7 +125,7 @@ jobs:
           command: |
             cd scripts
             chmod a+x env_setup.sh
-            ./env_setup.sh ne
+            ./env_setup.sh exilus
 
   load_test:
     machine:
