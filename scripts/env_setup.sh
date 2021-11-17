@@ -154,7 +154,8 @@
 
     # Create sas token
     echo "#### Creating sas token ####"
-    expiry_date=$(date -v+1d +"%Y-%m-%d")
+    # expiry_date=$(date -d +1d +"%Y-%m-%d")
+    expiry_date=2021-11-18
     dsc_sas_token=$( \
         az storage container generate-sas \
             --account-name "$storage_name" \
