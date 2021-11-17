@@ -161,6 +161,11 @@ jobs:
           name: "Transfer JMeter Files to Storage Account"
           working_directory: terraform
           command: |
+            # Output variables to file
+            echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
+            echo "target_hostname=$func.azurewebsites.net" >> << pipeline.parameters.properties_file_name >>
+            echo "number_of_threads=10" >> << pipeline.parameters.properties_file_name >>
+            
             URL=$(terraform output --raw storage_file_share_url)
             KEY=$(terraform output --raw storage_account_key)
             cp ../<< pipeline.parameters.properties_file_name >>  ../jmeter/<< pipeline.parameters.properties_file_name >>
