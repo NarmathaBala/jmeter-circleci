@@ -30,7 +30,7 @@ parameters:
     default: "sample.properties"
   environment_name:
     type: string
-    default: "ne"
+    default: "netest"
 
 orbs:
   windows: circleci/windows@2.2.0
@@ -47,9 +47,9 @@ commands:
           command: az -v
 
       - azure-cli/login-with-service-principal:
-          azure-sp: SERVICE_PRINCIPAL_ID
-          azure-sp-password: SERVICE_PRINCIPAL_SECRET
-          azure-sp-tenant: TENANT_ID
+          azure-sp: ARM_CLIENT_ID
+          azure-sp-password: ARM_CLIENT_SECRET
+          azure-sp-tenant: ARM_TENANT_ID
   
   login-to-azure-down:
     steps:
@@ -61,10 +61,10 @@ commands:
           command: az -v
 
       - azure-cli/login-with-service-principal:
-          azure-sp: SERVICE_PRINCIPAL_ID
-          azure-sp-password: SERVICE_PRINCIPAL_SECRET
-          azure-sp-tenant: TENANT_ID
-  
+          azure-sp: ARM_CLIENT_ID
+          azure-sp-password: ARM_CLIENT_SECRET
+          azure-sp-tenant: ARM_TENANT_ID
+    
 
   install-terraform-linux:
     steps:
@@ -327,10 +327,10 @@ workflows:
       - load_test:
           requires: 
             - deploy_script
+  destroy:
+    jobs:
       - cleanup_approval:
           type: approval
-          requires: 
-            - load_test
       - cleanup:
           requires: 
             - cleanup_approval

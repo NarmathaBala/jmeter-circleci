@@ -31,10 +31,10 @@
 
     # Set service principal information
     echo "#### Exporting SP as environment variables ####"
-    subscription_id="${AZURE_SUBSCRIPTION_ID}"
-    tenant_id="${TENANT_ID}"
-    service_principal_id="${SERVICE_PRINCIPAL_ID}"
-    service_principal_secret="${SERVICE_PRINCIPAL_SECRET}"
+    subscription_id="${ARM_SUBSCRIPTION_ID}"
+    tenant_id="${ARM_TENANT_ID}"
+    service_principal_id="${ARM_CLIENT_ID}"
+    service_principal_secret="${ARM_CLIENT_SECRET}"
 
     app_container_url="${APP_CONTAINER_URL}"
     app_zip_filename="${APP_ZIP_FILENAME}"
@@ -155,7 +155,8 @@
     # Create sas token
     echo "#### Creating sas token ####"
     # expiry_date=$(date -v+1d +"%Y-%m-%d")
-    expiry_date=2021-11-20
+    # expiry_date=2021-11-20
+    expiry_date=$(date +"%Y-%m-$(($(date +%d)+2))")
     dsc_sas_token=$( \
         az storage container generate-sas \
             --account-name "$storage_name" \

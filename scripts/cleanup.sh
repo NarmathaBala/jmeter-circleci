@@ -15,10 +15,10 @@
     set -euo pipefail
 
     # Set service principal information
-    subscription_id="${SUBSCRIPTION_ID}"
-    tenant_id="${TENANT_ID}"
-    service_principal_id="${SERVICE_PRINCIPAL_ID}"
-    service_principal_secret="${SERVICE_PRINCIPAL_SECRET}"
+    subscription_id="${ARM_SUBSCRIPTION_ID}"
+    tenant_id="${ARM_TENANT_ID}"
+    service_principal_id="${ARM_CLIENT_ID}"
+    service_principal_secret="${ARM_CLIENT_SECRET}"
 
     # Set resource variables
     resource_group="${RESOURCE_NAME_PREFIX}-$1-rg"
