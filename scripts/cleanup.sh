@@ -39,8 +39,11 @@
     echo "#### Deleting resource group: ${resource_group} ####"
     az group delete \
         --name "$resource_group"
+        --yes -y
     
     echo "#### Deleting resource group: ${jmeter_resource_group} ####"
     az group delete \
         --name "$jmeter_resource_group"
+        --yes -y
+        
 )
