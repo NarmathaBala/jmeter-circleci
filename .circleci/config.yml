@@ -30,7 +30,7 @@ parameters:
     default: "sample.properties"
   environment_name:
     type: string
-    default: "test"
+    default: "ne"
 
 orbs:
   windows: circleci/windows@2.2.0
