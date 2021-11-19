@@ -134,8 +134,10 @@ jobs:
           name: "Writing to properties file"
           command: |
             # Output variables to file
-            echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
-            echo "target_hostname=$func.azurewebsites.net" >> << pipeline.parameters.properties_file_name >>
+            # echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
+            # echo "target_hostname=$func.azurewebsites.net" >> << pipeline.parameters.properties_file_name >>
+            echo "TF_VAR_TARGET_HOSTNAME=microsoft.com" >> .env
+            echo "target_hostname=microsoft.com" >> << pipeline.parameters.properties_file_name >>
             echo "number_of_threads=10" >> << pipeline.parameters.properties_file_name >>
 
       - persist_to_workspace:
