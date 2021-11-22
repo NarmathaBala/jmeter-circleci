@@ -45,5 +45,4 @@
     az group delete \
         --name "$jmeter_resource_group" \
         --yes -y
-        
 )

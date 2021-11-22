@@ -30,7 +30,7 @@ parameters:
     default: "sample.properties"
   environment_name:
     type: string
-    default: "nba"
+    default: "ne"
 
 orbs:
   windows: circleci/windows@2.2.0
@@ -63,8 +63,7 @@ commands:
       - azure-cli/login-with-service-principal:
           azure-sp: ARM_CLIENT_ID
           azure-sp-password: ARM_CLIENT_SECRET
-          azure-sp-tenant: ARM_TENANT_ID
-    
+          azure-sp-tenant: ARM_TENANT_ID    
 
   install-terraform-linux:
     steps:
@@ -75,23 +74,6 @@ commands:
             curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
             sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
             sudo apt-get update && sudo apt-get install terraform
-
-  install-azcopy-linux:
-    steps:
-      - run:
-          name: "Install AzCopy"
-          command: |
-            # Install azcopy dependencies
-            sudo add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main"
-            sudo apt-get update
-            sudo apt-get install -y libicu55 libcurl3
-
-            # Install azcopy package from https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod/
-            # See: https://docs.microsoft.com/en-us/previous-versions/azure/storage/storage-use-azcopy-linux
-            echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod/ xenial main" > azure.list
-            sudo cp ./azure.list /etc/apt/sources.list.d/
-            sudo apt-get update --allow-unauthenticated --allow-insecure-repositories
-            sudo apt-get install -y --allow-unauthenticated azcopy
 
 jobs:
   build_image:
@@ -125,8 +107,8 @@ jobs:
 
       - run:
           name: "Invoking the deploy script for infrastructure and dsc configuration"
+          working_directory: scripts
           command: |
-            cd scripts
             chmod a+x env_setup.sh
             ./env_setup.sh << pipeline.parameters.environment_name >>
 
@@ -275,15 +257,12 @@ jobs:
 
       - run:
           name: "Clean up environment"
+          working_directory: scripts
           command: |
-            cd scripts
             chmod a+x ./cleanup.sh
             ./cleanup.sh << pipeline.parameters.environment_name >> jmeter
 
-      
-
 workflows:
-
   build_jmeter_docker_image:
     jobs:
       - build_image_approval:
@@ -313,8 +292,3 @@ workflows:
       - cleanup:
           requires: 
             - cleanup_approval
- 
-
-  
-
-
