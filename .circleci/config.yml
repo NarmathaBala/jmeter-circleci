@@ -30,7 +30,7 @@ parameters:
     default: "sample.properties"
   environment_name:
     type: string
-    default: "ne"
+    default: "e2e"  #replace this value your alias when running
 
 orbs:
   windows: circleci/windows@2.2.0
@@ -116,8 +116,6 @@ jobs:
           name: "Writing to properties file"
           command: |
             # Output variables to file
-            # echo "TF_VAR_TARGET_HOSTNAME=$func.azurewebsites.net" >> .env
-            # echo "target_hostname=$func.azurewebsites.net" >> << pipeline.parameters.properties_file_name >>
             echo "TF_VAR_TARGET_HOSTNAME=microsoft.com" >> .env
             echo "target_hostname=microsoft.com" >> << pipeline.parameters.properties_file_name >>
             echo "number_of_threads=10" >> << pipeline.parameters.properties_file_name >>
@@ -264,13 +262,13 @@ workflows:
     jobs:
       - build_image_approval:
           type: approval
-      - build_image:
-          requires:
-            - build_image_approval
           filters:
             branches:
               only:
                 - main
+      - build_image:
+          requires:
+            - build_image_approval
 
   build_deploy_loadtest:
     jobs:
