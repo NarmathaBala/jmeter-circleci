@@ -1,9 +1,6 @@
 version: 2.1
 
 parameters:
-  windows_image:
-    type: string
-    default: "circleci/windows@2.2.0"
   project_dir:
     type: string
     default: "JMeterCircleCI"
@@ -22,293 +19,267 @@ parameters:
   key_vault_name:
     type: string
     default: "kv-circleci"
+  jmeter_directory_input:
+    type: string
+    default: "jmeter"
+  junit_file_name:
+    type: string
+    default: "output.xml"
+  properties_file_name:
+    type: string
+    default: "sample.properties"
+  environment_name:
+    type: string
+    default: "e2e"  #replace this value your alias when running
 
 orbs:
-  windows: << pipeline.parameters.windows_image >>
+  windows: circleci/windows@2.2.0
+  terraform: circleci/terraform@3.0.0
+  azure-cli: circleci/azure-cli@1.2.0
+
+commands:
+  login-to-azure:
+    steps:
+      - azure-cli/install
+
+      - run:
+          name: "Verify Azure install"
+          command: az -v
+
+      - azure-cli/login-with-service-principal:
+          azure-sp: ARM_CLIENT_ID
+          azure-sp-password: ARM_CLIENT_SECRET
+          azure-sp-tenant: ARM_TENANT_ID
+  
+  login-to-azure-down:
+    steps:
+      - azure-cli/install
+      - run: sudo apt-cache policy azure-cli | sudo apt-get install --allow-downgrades azure-cli=2.18.0-1~stretch
+
+      - run:
+          name: "Verify Azure install"
+          command: az -v
+
+      - azure-cli/login-with-service-principal:
+          azure-sp: ARM_CLIENT_ID
+          azure-sp-password: ARM_CLIENT_SECRET
+          azure-sp-tenant: ARM_TENANT_ID    
+
+  install-terraform-linux:
+    steps:
+      - run:
+          name: "Install terraform"
+          command: |
+            sudo apt-get update && sudo apt-get install -y gnupg software-properties-common curl
+            curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+            sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+            sudo apt-get update && sudo apt-get install terraform
 
 jobs:
-  build:
-    description: Build application with Release configuration
+  build_image:
+    description: Build and Push JMeter Docker image
     executor:
-      name: windows/default
+      name: azure-cli/default
     steps:
       - checkout
 
-      - run:
-          name: "Build Application according to some given configuration"
-          command: >
-            dotnet
-            build << pipeline.parameters.project_dir >>
-            --configuration Release
+      - login-to-azure
 
-  test:
-    description: Setup and run application tests
+      - run:
+          name: "Build and Push JMeter Docker image"
+          command: >
+            az acr build
+            -t $TF_VAR_JMETER_DOCKER_IMAGE
+            -r $TF_VAR_JMETER_IMAGE_REGISTRY_NAME
+            -f docker/Dockerfile
+            .
+  
+  deploy_script:
     executor:
-      name: windows/default
+      name: azure-cli/default
     steps:
-      - checkout
+      - checkout 
 
-      - run:
-          name: "Run Application Tests"
-          command: >
-            dotnet
-            test << pipeline.parameters.test_dir >>
-            --configuration Release
-            --logger trx
-
-      - run:
-          name: "Install trx2junit"
-          when: always
-          command: |
-            dotnet tool install -g trx2junit
-            trx2junit << pipeline.parameters.test_dir >>/TestResults/*.trx
-
-      - store_test_results:
-          name: "Store test results"
-          path: << pipeline.parameters.test_dir >>/TestResults
-
-  package:
-    description: Package application
-    executor:
-      name: windows/default
-    steps:
-      - checkout
-
-      - run:
-          name: "Create package folder"
-          command: >
-            dotnet
-            publish << pipeline.parameters.project_dir >>
-            --configuration Release
-            --output package
-
-      - run:
-          name: "Zip package folder"
-          command: >
-            Compress-Archive
-            -Path package
-            -DestinationPath << pipeline.parameters.function_zip_file >>
-
-      - persist_to_workspace:
-          name: "Upload zip file to shared workspace"
-          root: .
-          paths:
-            - << pipeline.parameters.function_zip_file >>
-
-  deploy:
-    description: Deploy application
-    executor:
-      name: windows/default
-    steps:
       - attach_workspace:
           at: .
 
-      - run:
-          name: "Login to Azure"
-          command: |
-            # Login using service principal
-            az login `
-            --service-principal `
-            --tenant "$Env:TENANT_ID" `
-            --username "$Env:CLIENT_ID" `
-            --password "$Env:CLIENT_SECRET"
-
-            # Set default subscription
-            az account set `
-            --subscription "$Env:SUBSCRIPTION_ID"
+      - login-to-azure-down
 
       - run:
-          name: "Create azure function"
+          name: "Invoking the deploy script for infrastructure and dsc configuration"
+          working_directory: scripts
           command: |
-            # Set common variables which is associated with build id
-            $rg = "rg-jmetercircleci$Env:CIRCLE_BUILD_NUM"
-            $st = "stjmetercircleci$Env:CIRCLE_BUILD_NUM"
-            $func = "func-jmetercircleci$Env:CIRCLE_BUILD_NUM"
+            chmod a+x env_setup.sh
+            ./env_setup.sh << pipeline.parameters.environment_name >>
 
-            # Create resource group
-            az group create `
-            --location eastus `
-            --name "$rg"
-
-            # Create storage account
-            az storage account create `
-            --resource-group "$rg" `
-            --name "$st"
-
-            # Create azure function app
-            az functionapp create `
-            --resource-group "$rg" `
-            --storage-account "$st" `
-            --name "$func" `
-            --consumption-plan-location eastus `
-            --os-type Windows `
-            --runtime dotnet
-
-            # Deploy zip file
-            az functionapp deployment source config-zip `
-            --resource-group "$rg" `
-            --name "$func" `
-            --src << pipeline.parameters.function_zip_file >>
-
+      - run:
+          name: "Writing to properties file"
+          command: |
             # Output variables to file
-            echo "`$buildNum=`"$Env:CIRCLE_BUILD_NUM`"" >> output.ps1
-            echo "`$targetHost=`"$func.azurewebsites.net`"" >> output.ps1
+            echo "TF_VAR_TARGET_HOSTNAME=microsoft.com" >> .env
+            echo "target_hostname=microsoft.com" >> << pipeline.parameters.properties_file_name >>
+            echo "number_of_threads=10" >> << pipeline.parameters.properties_file_name >>
 
       - persist_to_workspace:
           name: "Upload output file to shared workspace"
           root: .
           paths:
-            - output.ps1
+            - .env
+            - << pipeline.parameters.properties_file_name >>
 
-  loadtest:
-    description: Load testing using JMeter
-    executor:
-      name: windows/default
+  load_test:
+    machine:
+      image: ubuntu-2004:202107-02
     steps:
       - checkout
 
       - attach_workspace:
           at: .
 
+      - login-to-azure
+
+      - install-terraform-linux
+
+      - terraform/init:
+          path: terraform
+
+      - terraform/validate:
+          path: terraform
+
+      - terraform/plan:
+          path: terraform
+
       - run:
-          name: "Login to Azure"
+          name: "Run Terraform Apply (target=file share)"
+          working_directory: terraform
+          command: >
+            terraform apply
+            -target azurerm_storage_share.jmeter_share
+            -auto-approve
+
+      - run:
+          name: "Transfer JMeter Files to Storage Account"
+          working_directory: terraform
           command: |
-            # Login using service principal
-            az login `
-            --service-principal `
-            --tenant "$Env:TENANT_ID" `
-            --username "$Env:CLIENT_ID" `
-            --password "$Env:CLIENT_SECRET"
+            URL=$(terraform output --raw storage_file_share_url)
+            KEY=$(terraform output --raw storage_account_key)
+            cp ../<< pipeline.parameters.properties_file_name >>  ../jmeter/<< pipeline.parameters.properties_file_name >>
 
-            # Set default subscription
-            az account set `
-            --subscription "$Env:SUBSCRIPTION_ID"
+            az storage file upload-batch \
+            --destination $URL \
+            --source "../<< pipeline.parameters.jmeter_directory_input >>" \
+            --account-key $KEY
 
       - run:
-          name: "Create virtual machines for load tests"
-          no_output_timeout: 45m
-          command: |
-            # Load output variables from file
-            . .\output.ps1
-
-            # Retrieve secrets from Azure Key Vault
-            $username = & az keyvault secret show `
-            --vault-name << pipeline.parameters.key_vault_name >> `
-            --query value `
-            --name admin-user
-
-            $password = & az keyvault secret show `
-            --vault-name << pipeline.parameters.key_vault_name >> `
-            --query value `
-            --name admin-password
-
-            # Create resource group
-            $rg = "rg-loadtest$buildNum"
-            az group create `
-            --location eastus `
-            --name "$rg"
-
-            # Create vnet
-            az network vnet create `
-            --resource-group "$rg" `
-            --name vnet-jmeter `
-            --subnet-name default
-
-            # Create server vm
-            az vm create `
-            --resource-group "$rg" `
-            --name "<< pipeline.parameters.jmeter_server_vm >>" `
-            --image "win2016datacenter" `
-            --size Standard_A1_v2 `
-            --use-unmanaged-disk `
-            --storage-sku Standard_LRS `
-            --admin-username "$username" `
-            --admin-password "$password" `
-            --public-ip-address pip-server
-
-            # Execute remote script to setup server
-            az vm extension set `
-            --publisher Microsoft.Compute `
-            --version 1.9 `
-            --name CustomScriptExtension `
-            --resource-group "$rg" `
-            --vm-name "<< pipeline.parameters.jmeter_server_vm >>" `
-            --no-wait `
-            --settings '{\"fileUris\": [\"https://raw.githubusercontent.com/phongcao/jmeter-circleci/main/scripts/jmeter_server_init.ps1\"],\"commandToExecute\": \"powershell -ExecutionPolicy Unrestricted -File jmeter_server_init.ps1\"}'
-
-            # Create client vm
-            az vm create `
-            --resource-group "$rg" `
-            --name "<< pipeline.parameters.jmeter_client_vm >>" `
-            --image "win2016datacenter" `
-            --size Standard_A1_v2 `
-            --use-unmanaged-disk `
-            --storage-sku Standard_LRS `
-            --admin-username "$username" `
-            --admin-password "$password" `
-            --public-ip-address pip-client
-
-            # Query ip address of jmeter server
-            $ip = az vm show `
-            --resource-group "$rg" `
-            --name "<< pipeline.parameters.jmeter_server_vm >>" `
-            --query privateIps `
-            --show-details `
-            --output tsv
-
-            # Output info
-            echo "jmeter server: $ip"
-            echo "target host: $targetHost"
-
-            # Waiting to make sure that jmeter server has been started
-            Start-Sleep -Second 300
-
-            # Execute remote script to setup client
-            az vm run-command invoke `
-            --command-id RunPowerShellScript `
-            --name "<< pipeline.parameters.jmeter_client_vm >>" `
-            --resource-group "$rg" `
-            --scripts @scripts/jmeter_client_init.ps1 `
-            --parameters "arg1=$ip" "arg2=$targetHost"
-
-      - run:
-          name: "Cleanup resources"
-          when: always
-          no_output_timeout: 30m
+          name: "Run Terraform Apply"
+          working_directory: terraform
           command: |
             # Load output variables from file
-            . .\output.ps1
+            set -a
+            source ../.env
+            set +a
 
-            # Remove resource groups
-            az group delete `
-            --name "rg-jmetercircleci$buildNum" `
-            --yes
+            # Run terraform apply command
+            terraform apply -auto-approve
 
-            az group delete `
-            --name "rg-loadtest$buildNum" `
-            --yes
+      - run:
+          name: "Waiting for test results."
+          working_directory: terraform
+          command: |
+            RG=$(terraform output --raw resource_group_name)
+            NAME=$(terraform output --raw jmeter_controller_name)
+            echo "`date`: Started!"
+            while [ $(az container show -g $RG -n $NAME --query "containers[0].instanceView.currentState.state" -o tsv) == "Running" ]; do
+              echo "`date`: Still Running..."
+              sleep 20
+            done
+            echo "`date`: Finished!"
+
+      - run:
+          name: "Get output logs."
+          working_directory: terraform
+          command: |
+            RG=$(terraform output --raw resource_group_name)
+            NAME=$(terraform output --raw jmeter_controller_name)
+            az container logs -g $RG -n $NAME
+
+      - run:
+          name: "Download JMeter Results."
+          working_directory: terraform
+          command: |
+            KEY=$(terraform output --raw storage_account_key)
+            STORAGE_NAME=$(terraform output --raw storage_account_name)
+            FILESHARE_NAME=$(terraform output --raw storage_file_share_name)
+            JMETER_RESULTS=$(terraform output --raw jmeter_results_file)
+            echo $JMETER_RESULTS_PATH
+            az storage file download -p $JMETER_RESULTS -s $FILESHARE_NAME --account-name $STORAGE_NAME --account-key $KEY
+
+      - run:
+          name: "Convert JMeter results to JUnit."
+          working_directory: terraform
+          command: |
+            JMETER_RESULTS=$(terraform output --raw jmeter_results_file)
+            JUNIT_RESULTS=<< pipeline.parameters.junit_file_name >>
+            python3 ../scripts/jtl_junit_converter.py $JMETER_RESULTS $JUNIT_RESULTS
+
+      - run:
+          name: "Upload JUnit Results to fileshare."
+          working_directory: terraform
+          command: |
+            KEY=$(terraform output --raw storage_account_key)
+            STORAGE_NAME=$(terraform output --raw storage_account_name)
+            FILESHARE_NAME=$(terraform output --raw storage_file_share_name)
+            JUNIT_RESULTS=<< pipeline.parameters.junit_file_name >>
+            az storage file upload -s $FILESHARE_NAME --source $JUNIT_RESULTS --account-name $STORAGE_NAME --account-key $KEY
+
+      - store_test_results:
+          name: "Store test results"
+          path: terraform
+
+      - store_artifacts:
+          path: terraform/<< pipeline.parameters.junit_file_name >>
+
+  cleanup:
+    executor:
+      name: azure-cli/default
+    steps:
+      - checkout 
+
+      - attach_workspace:
+          at: .
+      
+      - login-to-azure-down
+
+      - run:
+          name: "Clean up environment"
+          working_directory: scripts
+          command: |
+            chmod a+x ./cleanup.sh
+            ./cleanup.sh << pipeline.parameters.environment_name >> jmeter
 
 workflows:
-  build_deploy:
+  build_jmeter_docker_image:
     jobs:
-      - build
-      - test:
-          requires:
-            - build
-      - package:
-          requires:
-            - test
+      - build_image_approval:
+          type: approval
           filters:
             branches:
               only:
                 - main
-      - hold:
+      - build_image:
+          requires:
+            - build_image_approval
+
+  build_deploy_loadtest:
+    jobs:
+      - deploy_script
+      - load_test:
+          requires: 
+            - deploy_script
+      - cleanup_approval:
           type: approval
           requires:
-            - package
-      - deploy:
-          requires:
-            - hold
-      - loadtest:
-          requires:
-            - deploy
+              - load_test
+      - cleanup:
+          requires: 
+            - cleanup_approval

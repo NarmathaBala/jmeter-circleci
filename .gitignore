@@ -354,3 +354,9 @@ MigrationBackup/
 
 # Mac OS
 .DS_Store
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+
+*.zip
